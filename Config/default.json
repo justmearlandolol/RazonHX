@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "general": {
+    "show_settings_on_launch": true,
+    "hide_on_close": true
+  },
+  "appearance": {
+    "accent_color": "#62F5D0",
+    "background_color": "#17191B",
+    "text_color": "#E8F5F2",
+    "window_opacity": 1.0
+  }
+}

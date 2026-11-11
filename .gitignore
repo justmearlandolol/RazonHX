@@ -1,0 +1,16 @@
+.DS_Store
+build/
+dist/
+**/target/
+*.xcuserstate
+xcuserdata/
+DerivedData/
+*.zip
+*.dmg
+*.log
+.env
+*.p12
+*.p8
+*.mobileprovision
+__pycache__/
+.venv/

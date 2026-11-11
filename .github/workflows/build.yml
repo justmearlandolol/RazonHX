@@ -1,0 +1,120 @@
+name: Build RazonHX
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+jobs:
+  rust-tests:
+    name: Rust core tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.85.1
+        with:
+          components: rustfmt, clippy
+      - name: Format core
+        run: cargo fmt --manifest-path razon-core/Cargo.toml --all
+      - name: Test
+        run: cargo test --manifest-path razon-core/Cargo.toml
+      - name: Lint
+        run: cargo clippy --manifest-path razon-core/Cargo.toml --all-targets -- -D warnings
+      - name: Upload reproducibility files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-source-validation
+          path: |
+            razon-core/Cargo.lock
+            razon-core/src
+            Tests/RustTests/*.rs
+          retention-days: 7
+
+  macos:
+    name: macOS ${{ matrix.label }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: Intel
+            runner: macos-15-intel
+            arch: x86_64
+            target: x86_64-apple-darwin
+            minimum: '10.13'
+          - label: AppleSilicon
+            runner: macos-15
+            arch: arm64
+            target: aarch64-apple-darwin
+            minimum: '11.0'
+    runs-on: ${{ matrix.runner }}
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
+      MACOSX_DEPLOYMENT_TARGET: ${{ matrix.minimum }}
+      RAZON_RUST_TARGET: ${{ matrix.target }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.85.1
+        with:
+          targets: ${{ matrix.target }}
+      - name: Verify toolchain and native runner
+        run: |
+          xcodebuild -version
+          test "$(uname -m)" = "${{ matrix.arch }}"
+          rustc --version
+      - name: Rust tests on macOS
+        run: cargo test --manifest-path razon-core/Cargo.toml --target "$RAZON_RUST_TARGET"
+      - name: Build native application
+        run: |
+          set -o pipefail
+          xcodebuild -project RazonHX.xcodeproj -scheme RazonHX-${{ matrix.label }} \
+            -configuration Release -derivedDataPath build/${{ matrix.label }} \
+            CODE_SIGNING_ALLOWED=NO build | tee xcodebuild.log
+      - name: Swift bridge and native utility tests
+        run: scripts/test-swift.sh
+      - name: Verify and package bundle
+        run: |
+          app="build/${{ matrix.label }}/Build/Products/Release/RazonHX.app"
+          scripts/verify-bundle.sh "$app" "${{ matrix.arch }}" "${{ matrix.minimum }}"
+          ditto -c -k --sequesterRsrc --keepParent "$app" "RazonHX-${{ matrix.label }}.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RazonHX-${{ matrix.label }}
+          path: RazonHX-${{ matrix.label }}.zip
+          if-no-files-found: error
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log-${{ matrix.label }}
+          path: xcodebuild.log
+          retention-days: 7
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [rust-tests, macos]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: RazonHX-*
+          merge-multiple: true
+          path: release-assets
+      - name: Publish unsigned development assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" release-assets/*.zip \
+            --verify-tag --title "RazonHX $GITHUB_REF_NAME" \
+            --notes "Unsigned development build. Intel targets macOS 10.13; Apple Silicon targets 11.0. High Sierra runtime validation and memory profiling remain pending. See README and compatibility documentation before installing."
