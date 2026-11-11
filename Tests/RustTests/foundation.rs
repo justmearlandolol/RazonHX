@@ -1,24 +1,51 @@
-use razon_core::{config::{Config, MAX_CONFIG_BYTES}, engine::Engine, ffi::*, themes::valid_color};
-use std::{ffi::{CStr, CString}, fs, path::PathBuf, ptr, sync::atomic::{AtomicUsize, Ordering}};
+use razon_core::{
+    config::{Config, MAX_CONFIG_BYTES},
+    engine::Engine,
+    ffi::*,
+    themes::valid_color,
+};
+use std::{
+    ffi::{CStr, CString},
+    fs,
+    path::PathBuf,
+    ptr,
+    sync::atomic::{AtomicUsize, Ordering},
+};
 
 static SEQUENCE: AtomicUsize = AtomicUsize::new(0);
 struct Fixture(PathBuf);
 impl Fixture {
     fn new() -> Self {
-        let dir = std::env::temp_dir().join(format!("razon-test-{}-{}", std::process::id(), SEQUENCE.fetch_add(1, Ordering::SeqCst)));
+        let dir = std::env::temp_dir().join(format!(
+            "razon-test-{}-{}",
+            std::process::id(),
+            SEQUENCE.fetch_add(1, Ordering::SeqCst)
+        ));
         fs::create_dir_all(&dir).unwrap();
         Self(dir)
     }
-    fn path(&self) -> PathBuf { self.0.join("nested/config.json") }
+    fn path(&self) -> PathBuf {
+        self.0.join("nested/config.json")
+    }
 }
-impl Drop for Fixture { fn drop(&mut self) { let _ = fs::remove_dir_all(&self.0); } }
+impl Drop for Fixture {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.0);
+    }
+}
 
 #[test]
-fn bundled_defaults_are_valid() { Config::default().validate().unwrap(); }
+fn bundled_defaults_are_valid() {
+    Config::default().validate().unwrap();
+}
 #[test]
 fn validates_colors() {
-    for color in ["#62F5D0", "#abcdef", "#000000"] { assert!(valid_color(color)); }
-    for color in ["62F5D0", "#GGFFFF", "#FFF", "#FFFFFF00", "#ééé"] { assert!(!valid_color(color)); }
+    for color in ["#62F5D0", "#abcdef", "#000000"] {
+        assert!(valid_color(color));
+    }
+    for color in ["62F5D0", "#GGFFFF", "#FFF", "#FFFFFF00", "#ééé"] {
+        assert!(!valid_color(color));
+    }
 }
 #[test]
 fn creates_persists_and_reopens() {
@@ -32,7 +59,9 @@ fn creates_persists_and_reopens() {
     assert_eq!(Engine::open(f.path()).unwrap().config(), &config);
 }
 #[test]
-fn rejects_relative_path() { assert!(Engine::open(PathBuf::from("config.json")).is_err()); }
+fn rejects_relative_path() {
+    assert!(Engine::open(PathBuf::from("config.json")).is_err());
+}
 #[test]
 fn corrupt_file_is_not_overwritten() {
     let f = Fixture::new();
@@ -44,9 +73,15 @@ fn corrupt_file_is_not_overwritten() {
 #[test]
 fn rejects_newer_schema_and_unknown_fields() {
     let json = razon_core::config::DEFAULT_JSON;
-    assert!(Config::parse(&json.replace("\"schema_version\": 1", "\"schema_version\": 2")).is_err());
+    assert!(
+        Config::parse(&json.replace("\"schema_version\": 1", "\"schema_version\": 2")).is_err()
+    );
     assert!(Config::parse(&json.replace("\"general\":", "\"extra\": true, \"general\":")).is_err());
-    assert!(Config::parse(&json.replace("\"hide_on_close\": true", "\"hide_on_close\": true, \"extra\": 1")).is_err());
+    assert!(Config::parse(&json.replace(
+        "\"hide_on_close\": true",
+        "\"hide_on_close\": true, \"extra\": 1"
+    ))
+    .is_err());
 }
 #[test]
 fn rejects_oversized_config() {
@@ -113,7 +148,9 @@ fn event_queue_is_bounded() {
         engine.update(config).unwrap();
     }
     let mut count = 0;
-    while engine.next_event().is_some() { count += 1; }
+    while engine.next_event().is_some() {
+        count += 1;
+    }
     assert_eq!(count, 32);
 }
 #[test]
@@ -153,10 +190,16 @@ fn ffi_null_and_invalid_utf8_inputs_fail_safely() {
         assert!(handle.is_null());
         rx_string_free(error);
         let invalid = [0xffu8, 0];
-        assert_ne!(rx_engine_create(invalid.as_ptr().cast(), &mut handle, &mut error), 0);
+        assert_ne!(
+            rx_engine_create(invalid.as_ptr().cast(), &mut handle, &mut error),
+            0
+        );
         rx_string_free(error);
         assert_ne!(rx_engine_reset(ptr::null_mut(), &mut error), 0);
         rx_string_free(error);
-        assert_ne!(rx_engine_create(ptr::null(), ptr::null_mut(), ptr::null_mut()), 0);
+        assert_ne!(
+            rx_engine_create(ptr::null(), ptr::null_mut(), ptr::null_mut()),
+            0
+        );
     }
 }

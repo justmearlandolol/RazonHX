@@ -11,7 +11,7 @@
 
 ## CI verification
 
-Supported hosted images: `macos-15-intel` (Intel) and `macos-15` (Apple Silicon). Both explicitly select Xcode 16.4. CI asserts the actual CPU, runs native Rust tests and Swift executable tests, builds the app, verifies bundle resources and deployment metadata, then archives with `ditto` preserving bundle structure. Linux independently tests/lints Rust. Version tags release both artifacts only after every test/build job succeeds.
+Supported hosted images: `macos-15-intel` (Intel) and `macos-15` (Apple Silicon). Both explicitly select Xcode 16.4. CI asserts the actual CPU, runs native Rust tests and Swift bridge tests and native AppKit control-action smoke tests, builds the app, verifies bundle resources and deployment metadata, then archives with `ditto` preserving bundle structure. Linux independently tests/lints Rust. Version tags release both artifacts only after every test/build job succeeds.
 
 No signing or notarization credentials exist in source. CI's `CODE_SIGNING_ALLOWED=NO` is intentional. Download artifacts only from a trusted run/commit. Notarization is optional future release work and does not make an app inherently High Sierra compatible.
 

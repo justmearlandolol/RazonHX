@@ -60,8 +60,8 @@ The Xcode pre-build phase compiles the appropriate Rust static library. The `.ap
 ## Tests and verification
 
 ```sh
-cargo test --manifest-path razon-core/Cargo.toml
-cargo clippy --manifest-path razon-core/Cargo.toml --all-targets -- -D warnings
+cargo test --locked --manifest-path razon-core/Cargo.toml
+cargo clippy --locked --manifest-path razon-core/Cargo.toml --all-targets -- -D warnings
 
 # On a native Intel Mac, after building:
 RAZON_RUST_TARGET=x86_64-apple-darwin scripts/test-swift.sh
@@ -69,7 +69,7 @@ scripts/verify-bundle.sh build/Intel/Build/Products/Release/RazonHX.app x86_64 1
 # On Apple Silicon use aarch64-apple-darwin, arm64, and 11.0.
 ```
 
-Rust tests cover defaults, validation, corruption preservation, bounded input/events, atomic-write failure, persistence, reset and FFI ownership/null errors. Native Swift tests exercise the actual C/Rust bridge and color conversions. They do not substitute for interactive UI testing.
+Rust tests cover defaults, validation, corruption preservation, bounded input/events, atomic-write failure, persistence, reset and FFI ownership/null errors. Native Swift tests exercise the actual C/Rust bridge and color conversions. AppKit smoke tests construct the real settings window, navigate each working section, invoke General/Appearance control actions and verify persistence. They do not substitute for interactive UI testing.
 
 `python3 scripts/generate-project.py` deterministically regenerates the committed Xcode project after adding Swift sources. It requires only Python's standard library. Shared schemes are checked in. Packaging verification checks resources, Info.plist, Mach-O architecture/minimum OS, and nonportable dynamic libraries.
 

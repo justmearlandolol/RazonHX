@@ -8,12 +8,15 @@ case "$RAZON_RUST_TARGET" in
   *) exit 1 ;;
 esac
 mkdir -p build/tests
-xcrun swiftc -swift-version 5 -parse-as-library -target "$triple" \
-  -sdk "$(xcrun --sdk macosx --show-sdk-path)" \
-  -import-objc-header Sources/Bridge/RazonHXBridge.h \
-  Sources/Bridge/RazonHXBridge.swift Sources/Components/Views/NativeViews.swift \
-  Tests/SwiftTests/FoundationTests.swift \
-  -L "razon-core/target/$RAZON_RUST_TARGET/release" -lrazon_core -liconv \
-  -framework AppKit -framework Security -framework SystemConfiguration \
-  -o build/tests/FoundationTests
-build/tests/FoundationTests
+for name in FoundationTests SettingsSmokeTests; do
+  xcrun swiftc -swift-version 5 -parse-as-library -target "$triple" \
+    -sdk "$(xcrun --sdk macosx --show-sdk-path)" \
+    -import-objc-header Sources/Bridge/RazonHXBridge.h \
+    Sources/Bridge/RazonHXBridge.swift Sources/Components/Views/NativeViews.swift \
+    Sources/Interface/RazonSettings/SettingsWindowController.swift \
+    "Tests/SwiftTests/$name.swift" \
+    -L "razon-core/target/$RAZON_RUST_TARGET/release" -lrazon_core -liconv \
+    -framework AppKit -framework Security -framework SystemConfiguration \
+    -o "build/tests/$name"
+  "build/tests/$name"
+done
