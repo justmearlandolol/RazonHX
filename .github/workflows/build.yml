@@ -18,7 +18,7 @@ jobs:
     name: Rust core tests
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
       - uses: dtolnay/rust-toolchain@1.85.1
         with:
           components: rustfmt, clippy
@@ -26,11 +26,20 @@ jobs:
         run: cargo fmt --manifest-path razon-core/Cargo.toml --all
       - name: Test
         run: cargo test --manifest-path razon-core/Cargo.toml
+      - name: Bootstrap reproducible source for review
+        run: |
+          python3 - <<'PYTHON'
+          import base64
+          from pathlib import Path
+          for p in [Path('razon-core/Cargo.lock'), *Path('razon-core/src').rglob('*.rs'), Path('Tests/RustTests/foundation.rs')]:
+              if p.exists():
+                  print(f"::notice title=Bootstrap {p}::{base64.b64encode(p.read_bytes()).decode()}")
+          PYTHON
       - name: Lint
         run: cargo clippy --manifest-path razon-core/Cargo.toml --all-targets -- -D warnings
       - name: Upload reproducibility files
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: core-source-validation
           path: |
@@ -61,7 +70,7 @@ jobs:
       MACOSX_DEPLOYMENT_TARGET: ${{ matrix.minimum }}
       RAZON_RUST_TARGET: ${{ matrix.target }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
       - uses: dtolnay/rust-toolchain@1.85.1
         with:
           targets: ${{ matrix.target }}
@@ -83,16 +92,24 @@ jobs:
       - name: Verify and package bundle
         run: |
           app="build/${{ matrix.label }}/Build/Products/Release/RazonHX.app"
-          scripts/verify-bundle.sh "$app" "${{ matrix.arch }}" "${{ matrix.minimum }}"
+          if ! scripts/verify-bundle.sh "$app" "${{ matrix.arch }}" "${{ matrix.minimum }}" > bundle-verification.log 2>&1; then
+            python3 - <<'PYTHON'
+          from pathlib import Path
+          log = Path('bundle-verification.log').read_text()
+          print('::error title=Bundle details::' + log.replace('%', '%25').replace('\n', '%0A').replace('\r', '%0D'))
+          PYTHON
+            exit 1
+          fi
+          cat bundle-verification.log
           ditto -c -k --sequesterRsrc --keepParent "$app" "RazonHX-${{ matrix.label }}.zip"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7.0.2
         with:
           name: RazonHX-${{ matrix.label }}
           path: RazonHX-${{ matrix.label }}.zip
           if-no-files-found: error
       - name: Upload build log
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: build-log-${{ matrix.label }}
           path: xcodebuild.log
@@ -105,7 +122,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8.0.2
         with:
           pattern: RazonHX-*
           merge-multiple: true

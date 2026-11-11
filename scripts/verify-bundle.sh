@@ -1,5 +1,6 @@
 #!/bin/bash
 set -euo pipefail
+trap 'echo "::error title=Bundle verification::Failed at line $LINENO: $BASH_COMMAND"' ERR
 app=${1:?Provide path to RazonHX.app}
 arch=${2:?Provide x86_64 or arm64}
 minimum=${3:?Provide deployment target}
