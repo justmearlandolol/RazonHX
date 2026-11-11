@@ -9,4 +9,4 @@ case "$RAZON_RUST_TARGET" in
   *) echo "Unsupported Rust target: $RAZON_RUST_TARGET" >&2; exit 1 ;;
 esac
 export CARGO_TARGET_DIR="$SRCROOT/razon-core/target"
-cargo build --manifest-path "$SRCROOT/razon-core/Cargo.toml" --release --target "$RAZON_RUST_TARGET"
+cargo build --locked --manifest-path "$SRCROOT/razon-core/Cargo.toml" --release --target "$RAZON_RUST_TARGET"

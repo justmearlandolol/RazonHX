@@ -25,18 +25,18 @@ jobs:
       - name: Format core
         run: cargo fmt --manifest-path razon-core/Cargo.toml --all
       - name: Test
-        run: cargo test --manifest-path razon-core/Cargo.toml
+        run: cargo test --locked --manifest-path razon-core/Cargo.toml
       - name: Bootstrap reproducible source for review
         run: |
           python3 - <<'PYTHON'
-          import base64
+          import base64, zlib
           from pathlib import Path
           for p in [Path('razon-core/Cargo.lock'), *Path('razon-core/src').rglob('*.rs'), Path('Tests/RustTests/foundation.rs')]:
               if p.exists():
-                  print(f"::notice title=Bootstrap {p}::{base64.b64encode(p.read_bytes()).decode()}")
+                  print(f"::notice title=Bootstrap {p}::{base64.b64encode(zlib.compress(p.read_bytes())).decode()}")
           PYTHON
       - name: Lint
-        run: cargo clippy --manifest-path razon-core/Cargo.toml --all-targets -- -D warnings
+        run: cargo clippy --locked --manifest-path razon-core/Cargo.toml --all-targets -- -D warnings
       - name: Upload reproducibility files
         if: always()
         uses: actions/upload-artifact@v7.0.2
@@ -80,7 +80,7 @@ jobs:
           test "$(uname -m)" = "${{ matrix.arch }}"
           rustc --version
       - name: Rust tests on macOS
-        run: cargo test --manifest-path razon-core/Cargo.toml --target "$RAZON_RUST_TARGET"
+        run: cargo test --locked --manifest-path razon-core/Cargo.toml --target "$RAZON_RUST_TARGET"
       - name: Build native application
         run: |
           set -o pipefail

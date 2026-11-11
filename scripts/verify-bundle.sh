@@ -11,7 +11,7 @@ test -f "$app/Contents/Resources/default.json"
 plutil -lint "$app/Contents/Info.plist"
 actual=$(/usr/libexec/PlistBuddy -c 'Print LSMinimumSystemVersion' "$app/Contents/Info.plist")
 test "$actual" = "$minimum"
-lipo -verify_arch "$arch" "$app/Contents/MacOS/RazonHX"
+lipo "$app/Contents/MacOS/RazonHX" -verify_arch "$arch"
 # Reject an unexpected deployment target in the Mach-O itself, not just Info.plist.
 load_commands=$(otool -l "$app/Contents/MacOS/RazonHX")
 if ! printf '%s\n' "$load_commands" | awk -v expected="$minimum" '

@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::themes::valid_color;
+use serde::{Deserialize, Serialize};
 
 pub const DEFAULT_JSON: &str = include_str!("../../../Config/default.json");
 pub const MAX_CONFIG_BYTES: u64 = 64 * 1024;
@@ -39,18 +39,24 @@ impl Config {
         if json.len() as u64 > MAX_CONFIG_BYTES {
             return Err("Configuration exceeds the 64 KiB limit.".into());
         }
-        let config: Self = serde_json::from_str(json)
-            .map_err(|e| format!("Invalid configuration: {e}"))?;
+        let config: Self =
+            serde_json::from_str(json).map_err(|e| format!("Invalid configuration: {e}"))?;
         config.validate()?;
         Ok(config)
     }
 
     pub fn validate(&self) -> Result<(), String> {
         if self.schema_version != 1 {
-            return Err(format!("Unsupported configuration schema {}. File left unchanged.", self.schema_version));
+            return Err(format!(
+                "Unsupported configuration schema {}. File left unchanged.",
+                self.schema_version
+            ));
         }
         let a = &self.appearance;
-        if ![&a.accent_color, &a.background_color, &a.text_color].iter().all(|c| valid_color(c)) {
+        if ![&a.accent_color, &a.background_color, &a.text_color]
+            .iter()
+            .all(|c| valid_color(c))
+        {
             return Err("Colors must use #RRGGBB notation.".into());
         }
         if !a.window_opacity.is_finite() || !(0.85..=1.0).contains(&a.window_opacity) {
