@@ -70,7 +70,7 @@ struct SettingsSmokeTests {
         }
         let png = root.appendingPathComponent("test.png")
         let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 2, pixelsHigh: 2, bitsPerSample: 8,
-            samplesPerPixel: 4, hasAlpha: true, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
+            samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
         for y in 0..<2 { for x in 0..<2 { bitmap.setColor(.white, atX: x, y: y) } }
         try bitmap.representation(using: .png, properties: [:])!.write(to: png)
         let imported = try controller.library.add(png, name: "Test image", category: "Tests")

@@ -77,7 +77,17 @@ jobs:
             exit 1
           fi
       - name: Swift bridge and native utility tests
-        run: scripts/test-swift.sh
+        run: |
+          set -o pipefail
+          if ! scripts/test-swift.sh 2>&1 | tee swift-tests.log; then
+            python3 - <<'PYTHON'
+          from pathlib import Path
+          log = Path('swift-tests.log').read_text()
+          errors = '\n'.join(line for line in log.splitlines() if 'error:' in line or 'failed' in line.lower()) or log[-6000:]
+          print('::error title=Swift tests::' + errors[:6000].replace('%', '%25').replace('\n', '%0A').replace('\r', '%0D'))
+          PYTHON
+            exit 1
+          fi
       - name: Verify and package bundle
         run: |
           app="build/${{ matrix.label }}/Build/Products/Release/RazonHX.app"
