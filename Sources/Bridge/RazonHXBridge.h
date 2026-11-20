@@ -1,6 +1,16 @@
 #ifndef RAZONHX_BRIDGE_H
 #define RAZONHX_BRIDGE_H
 #include <stdint.h>
+#include <ColorSync/ColorSync.h>
+#include <CoreFoundation/CoreFoundation.h>
+
+static inline CFStringRef _Nullable rx_display_copy_uuid(uint32_t display) CF_RETURNS_RETAINED {
+    CFUUIDRef uuid = CGDisplayCreateUUIDFromDisplayID(display);
+    if (!uuid) return NULL;
+    CFStringRef result = CFUUIDCreateString(NULL, uuid);
+    CFRelease(uuid);
+    return result;
+}
 #ifdef __cplusplus
 extern "C" {
 #endif

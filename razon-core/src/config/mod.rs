@@ -1,4 +1,4 @@
-use crate::themes::valid_color;
+use crate::{modules::Desktop, themes::valid_color};
 use serde::{Deserialize, Serialize};
 
 pub const DEFAULT_JSON: &str = include_str!("../../../Config/default.json");
@@ -26,6 +26,8 @@ pub struct Config {
     pub schema_version: u32,
     pub general: General,
     pub appearance: Appearance,
+    #[serde(default)]
+    pub desktop: Desktop,
 }
 
 impl Default for Config {
@@ -62,6 +64,6 @@ impl Config {
         if !a.window_opacity.is_finite() || !(0.85..=1.0).contains(&a.window_opacity) {
             return Err("Window opacity must be between 0.85 and 1.0.".into());
         }
-        Ok(())
+        self.desktop.validate()
     }
 }

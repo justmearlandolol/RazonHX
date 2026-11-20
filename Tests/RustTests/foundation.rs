@@ -203,3 +203,48 @@ fn ffi_null_and_invalid_utf8_inputs_fail_safely() {
         );
     }
 }
+
+#[test]
+fn legacy_configuration_keeps_custom_values_and_gains_desktop_defaults() {
+    let legacy = r##"{
+        "schema_version": 1,
+        "general": { "show_settings_on_launch": false, "hide_on_close": true },
+        "appearance": { "accent_color": "#ABCDEF", "background_color": "#17191B",
+                        "text_color": "#FFFFFF", "window_opacity": 0.9 }
+    }"##;
+    let config = Config::parse(legacy).unwrap();
+    assert!(!config.general.show_settings_on_launch);
+    assert_eq!(config.appearance.accent_color, "#ABCDEF");
+    assert_eq!(config.desktop, Config::default().desktop);
+    assert_eq!(
+        Config::parse(&serde_json::to_string(&config).unwrap()).unwrap(),
+        config
+    );
+}
+
+#[test]
+fn overlay_and_wallpaper_assignments_persist_and_validate() {
+    use razon_core::modules::{Display, Media, Wallpaper};
+    let f = Fixture::new();
+    let mut engine = Engine::open(f.path()).unwrap();
+    let mut next = engine.config().clone();
+    let id = "D81F1C18-27AE-4C23-91B3-8BCE40285799".to_string();
+    next.desktop.toolbar.display = Display::Overlay;
+    next.desktop.dock.display = Display::Overlay;
+    next.desktop
+        .wallpapers
+        .insert("all".to_string(), id.clone());
+    assert!(engine.update(next.clone()).is_err());
+    next.desktop.library.push(Wallpaper {
+        id,
+        name: "My wallpaper".into(),
+        kind: Media::Gif,
+        category: "Animation".into(),
+        favorite: true,
+        archived: false,
+    });
+    engine.update(next.clone()).unwrap();
+    assert_eq!(Engine::open(f.path()).unwrap().config(), &next);
+    next.desktop.library[0].archived = true;
+    assert!(engine.update(next).is_err());
+}

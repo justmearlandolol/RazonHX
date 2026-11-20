@@ -14,6 +14,7 @@ struct RazonConfiguration: Codable {
     var schema_version: Int
     var general: General
     var appearance: Appearance
+    var desktop: DesktopConfiguration
 }
 
 struct EngineError: LocalizedError {

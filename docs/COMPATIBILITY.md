@@ -33,8 +33,15 @@ Run on a real Intel Mac booted into macOS 10.13, then on a supported Apple Silic
 - [ ] Record idle CPU, physical footprint and energy use with Activity Monitor/Instruments.
 - [ ] Repeat open/change/close cycles and examine allocations for growth.
 
-Keep this list unchecked until measured on the actual OS. Memory targets in the brief are experimental, not benchmarks. No Accessibility, screen recording or network permission is requested by Phase 1.
+Keep this list unchecked until measured on the actual OS. Memory targets in the brief are experimental, not benchmarks. Accessibility is requested only from Window Manager settings. The desktop uses no screen-recording permission. Weather is the only optional network-backed widget.
 
-## Future native limitations
+## Desktop acceptance (run on both architectures)
+
+- [ ] On each display, set Dock and Toolbar to **On overlay** independently. Verify approach, leave, clicks through when hidden, and changing display arrangements or Spaces.
+- [ ] Compare the analog/digital/weather cards to the design reference and check date, time format, seconds, corner placement, and forecast failure with no network.
+- [ ] Exercise PNG, GIF, MP4, HTML and WAV import, silent preview, apply, pause, archive/restore, and app relaunch. Confirm CSS works and imported HTML cannot load external or local sibling resources or run scripts.
+- [ ] Test themes/profiles, pin/unpin and launcher keyboard selection, and window placement with Accessibility allowed and denied.
+
+## Native limitations
 
 Use desktop-level windows and supported APIs, never replace protected Apple components. Window utilities need explicitly granted Accessibility permission. Public macOS APIs do not provide arbitrary private Space creation/assignment or programmatic Space switching equivalent to private CGS APIs. Offer supported/user-authorized alternatives; do not simulate functionality with fake workspace data. Blur is native material-based rather than a guaranteed linear blur-radius knob. WAV is audio-only and needs a genuine visualization renderer. HTML imports need a strict resource/network policy before they are considered complete; a navigation delegate alone is not a network sandbox.

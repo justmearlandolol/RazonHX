@@ -9,5 +9,40 @@
     "background_color": "#17191B",
     "text_color": "#E8F5F2",
     "window_opacity": 1.0
+  },
+  "desktop": {
+    "toolbar": {
+      "display": "always",
+      "edge": "top",
+      "opacity": 0.83,
+      "blur": true,
+      "size": 32,
+      "radius": 9
+    },
+    "dock": {
+      "display": "always",
+      "edge": "bottom",
+      "opacity": 0.8,
+      "blur": true,
+      "size": 42,
+      "radius": 16
+    },
+    "clock": true,
+    "clock_corner": "top_left",
+    "twenty_four_hour": true,
+    "seconds": true,
+    "widgets": false,
+    "dock_apps": [
+      "com.apple.finder",
+      "com.apple.Safari",
+      "com.apple.Terminal",
+      "com.apple.systempreferences"
+    ],
+    "library": [],
+    "wallpapers": {},
+    "scaling": "fill",
+    "media_paused": false,
+    "media_volume": 0.0,
+    "weather": null
   }
 }

@@ -3,5 +3,6 @@ pub mod config;
 pub mod engine;
 pub mod events;
 pub mod ffi;
+pub mod modules;
 pub mod system;
 pub mod themes;

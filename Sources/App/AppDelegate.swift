@@ -2,15 +2,20 @@ import AppKit
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var engine: RazonEngine?
+    private var desktop: DesktopController?
     private var settings: SettingsWindowController?
     private var statusItem: NSStatusItem?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         installMenu()
         do {
-            let engine = try RazonEngine(url: RazonEngine.configurationURL())
+            let url = try RazonEngine.configurationURL()
+            let engine = try RazonEngine(url: url)
             self.engine = engine
-            settings = try SettingsWindowController(engine: engine)
+            let directory = url.deletingLastPathComponent()
+            let desktop = DesktopController(engine: engine, directory: directory) { [weak self] in self?.showSettings(nil) }
+            self.desktop = desktop
+            settings = try SettingsWindowController(engine: engine, directory: directory, desktop: desktop)
             installStatusItem()
             if try engine.configuration().general.show_settings_on_launch { showSettings(nil) }
         } catch {
@@ -27,6 +32,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let root = NSMenuItem()
         let app = NSMenu(title: "RazonHX")
         app.addItem(withTitle: "Settings…", action: #selector(showSettings(_:)), keyEquivalent: ",").target = self
+        let launcher = app.addItem(withTitle: "Open RazonLauncher", action: #selector(openLauncher(_:)), keyEquivalent: "l")
+        launcher.keyEquivalentModifierMask = [.command, .shift]
+        launcher.target = self
         app.addItem(NSMenuItem.separator())
         app.addItem(withTitle: "Quit RazonHX", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         root.submenu = app
@@ -51,11 +59,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         item.button?.toolTip = "RazonHX — Redefine Your Desktop."
         let menu = NSMenu()
         menu.addItem(withTitle: "Open RazonHX Settings", action: #selector(showSettings(_:)), keyEquivalent: "").target = self
+        menu.addItem(withTitle: "Open RazonLauncher", action: #selector(openLauncher(_:)), keyEquivalent: "").target = self
         menu.addItem(NSMenuItem.separator())
         menu.addItem(withTitle: "Quit RazonHX", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         item.menu = menu
         statusItem = item
     }
+    @objc private func openLauncher(_ sender: Any?) { desktop?.showLauncher() }
     @objc private func showSettings(_ sender: Any?) {
         settings?.showWindow(nil)
         NSApp.activate(ignoringOtherApps: true)
@@ -69,6 +79,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let item = statusItem { NSStatusBar.system.removeStatusItem(item) }
         statusItem = nil
         settings = nil
+        desktop = nil
         engine = nil
     }
 }

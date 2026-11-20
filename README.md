@@ -4,23 +4,17 @@
 
 A native macOS desktop customization environment built with **Swift 5, AppKit and a Rust core**. No SwiftUI, Electron, Tauri or embedded Chromium.
 
-> **v0.1.0 — Phase 1 / Foundation.** This is an incremental native application, **not the finished wallpaper environment**. Planned sections are visibly labeled, not fake working controls. No memory or High Sierra runtime claims have been verified yet.
+## Using the desktop
 
-## What works in this increment
+RazonBar, RazonDock, and the standalone clock start when you open the app. They complement the macOS menu bar, Dock, and desktop rather than replacing them. Imported wallpaper assignments and preferences are restored at launch.
 
-- Native settings window, application/Edit menus, menu bar entry, reopen and quit lifecycle.
-- Rust engine owned through an opaque C ABI handle; owned strings explicitly freed.
-- Versioned JSON configuration, strict validation, bounded reads, atomic private-file writes.
-- Config persists at `~/Library/Application Support/RazonHX/config.json`.
-- Event-driven settings updates with a bounded notification queue; no idle polling/timers.
-- General settings: open settings on launch; keep running after closing the window.
-- Appearance: accent/background/text colors and settings-window opacity, applied immediately.
-- Reveal config in Finder and restore defaults **after confirmation and backup**.
-- Corrupt/unsupported configuration is reported, never silently overwritten.
-- Two separate Xcode targets and automated native test/build/package/release jobs.
-- The original supplied logo is used unchanged for branding; the `.icns` is a resized derivative.
+- **Toolbar and Dock:** In either section, choose **On overlay** under Display to reveal the panel when the pointer approaches and hide it again when the pointer moves away. The two modes are independent. Adjust position, size, opacity, blur, and corner radius, or pin apps in Dock settings.
+- **Clock & Date:** Choose the desktop corner, 12/24-hour time, and seconds. The standalone widget uses the reference’s monochrome analog dial, stacked digital date, and wide weather card. To show live weather, enter a display name and coordinates. Coordinates are only sent to Open-Meteo after opt-in, while the standalone clock is enabled.
+- **Wallpaper:** Import or drop PNG, GIF, MP4, UTF-8 HTML, or WAV. Preview silently, apply to all displays or one display, and organize entries by category, favorites, and archive. Animated media can be paused; volume starts at zero. HTML supports self-contained CSS (including animations), not JavaScript, external assets, or multi-file projects. WAV uses live waveform data rather than a stock animation.
+- **Launcher and windows:** Search installed applications from a toolbar/dock button, menu bar menu, or **⌘⇧L** while RazonHX is active. With Accessibility permission, arrange the last focused app’s window into a half, centered, or filled position.
+- **Widgets, themes, and profiles:** Toggle a real CPU/memory/network/power widget, apply the **Obsidian Violet** preset for the violet reference styling, or create a custom palette in Appearance. Import/export themes and save, switch, or export desktop profiles. Profile JSON does not embed media files.
 
-**Not yet implemented:** PNG/GIF/MP4/HTML/WAV wallpaper renderers, wallpaper library, RazonBar, RazonDock, RazonClock, launcher, window utilities, widgets, themes and profiles. Their module boundaries are reserved in the prescribed structure. See [roadmap](docs/ROADMAP.md).
+RazonHX stores settings in `~/Library/Application Support/RazonHX/config.json`. Older settings keep their existing values and gain desktop defaults. Corrupt settings are not silently overwritten. Restoring defaults backs up the configuration first; media files remain on disk. See the [roadmap](docs/ROADMAP.md) for outstanding work and [compatibility](docs/COMPATIBILITY.md) for real-Mac verification.
 
 ## Platform targets
 
@@ -79,9 +73,9 @@ Rust tests cover defaults, validation, corruption preservation, bounded input/ev
 RazonHX.xcodeproj/       Separate Intel and Apple Silicon targets, shared schemes
 Sources/
   App/                  Native AppKit entry point and lifecycle
-  Interface/            RazonSettings; reserved Bar/Dock/Clock/Launcher boundaries
-  Modules/              Reserved Wallpaper/Themes/Widgets/Profiles/Window/Workspace
-  Components/           Native reusable views; reserved panels/animations/controls
+  Interface/            RazonSettings, RazonBar, RazonDock, RazonClock, RazonLauncher
+  Modules/              Wallpaper, Themes, Widgets, Profiles, Window utilities
+  Components/           Native reusable views and desktop panels
   Bridge/               RazonHXBridge.h and the owning Swift wrapper
 razon-core/
   src/config/           Versioned schema, bundled defaults, validation
@@ -90,7 +84,7 @@ razon-core/
   src/themes/           Shared color validation (not a full theme manager yet)
   src/system/           Bounded file reads and atomic writes
   src/ffi/              C ABI and panic/error containment
-  src/modules/          Reserved for phase-specific implementations
+  src/modules/          Typed desktop preferences and wallpaper metadata validation
   src/wallpaper/        Reserved for phase-specific implementations
 Resources/              Assets, icons, wallpaper/theme boundaries, official logo
 Config/default.json     Single source for bundled defaults

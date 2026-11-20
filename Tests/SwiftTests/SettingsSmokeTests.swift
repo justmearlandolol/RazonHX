@@ -18,7 +18,7 @@ struct SettingsSmokeTests {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("RazonHX-ui-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: root) }
         let engine = try RazonEngine(url: root.appendingPathComponent("config.json"))
-        let controller = try SettingsWindowController(engine: engine)
+        let controller = try SettingsWindowController(engine: engine, directory: root)
         guard let window = controller.window, let content = window.contentView else {
             fatalError("Native settings window was not constructed")
         }
@@ -44,7 +44,27 @@ struct SettingsSmokeTests {
         assert(abs(appearance.appearance.window_opacity - 0.95) < 0.001)
         assert(abs(Double(window.alphaValue) - 0.95) < 0.001)
 
-        for section in ["Home", "Advanced", "About RazonHX", "Appearance"] {
+        for section in ["Toolbar", "Dock"] {
+            findButton(section, in: content).performClick(nil)
+            guard let display = descendants(content).compactMap({ $0 as? NSPopUpButton }).first(where: {
+                $0.itemTitles.contains("On overlay")
+            }), let action = display.action else { fatalError("Missing On overlay control for \(section)") }
+            display.selectItem(withTitle: "On overlay")
+            assert(application.sendAction(action, to: display.target, from: display))
+        }
+        let desktop = try engine.configuration().desktop
+        assert(desktop.toolbar.display == .overlay && desktop.dock.display == .overlay)
+        let screen = NSRect(x: -600, y: 0, width: 600, height: 400)
+        let panel = ScreenPlacement.panel(size: NSSize(width: 200, height: 50), edge: .bottom, area: screen)
+        let near = NSPoint(x: panel.midX, y: panel.maxY + 12)
+        let leaving = NSPoint(x: panel.midX, y: panel.maxY + 24)
+        assert(ScreenPlacement.shouldReveal(at: near, panel: panel, screen: screen, wasVisible: false))
+        assert(!ScreenPlacement.shouldReveal(at: leaving, panel: panel, screen: screen, wasVisible: false))
+        assert(ScreenPlacement.shouldReveal(at: leaving, panel: panel, screen: screen, wasVisible: true))
+        assert(!ScreenPlacement.shouldReveal(at: NSPoint(x: panel.midX, y: -5), panel: panel, screen: screen, wasVisible: true))
+
+        for section in ["Home", "Desktop", "Wallpaper", "Clock & Date", "Launcher", "Window Manager", "Widgets",
+                        "Themes", "Profiles", "Modules", "Advanced", "About RazonHX", "Appearance"] {
             findButton(section, in: content).performClick(nil)
             content.layoutSubtreeIfNeeded()
         }

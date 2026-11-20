@@ -59,7 +59,7 @@ for arch, rust, minimum, label in [('x86_64', 'x86_64-apple-darwin', '10.13', 'I
         'ENABLE_USER_SCRIPT_SANDBOXING': 'NO', 'SWIFT_STRICT_CONCURRENCY': 'minimal',
         'SWIFT_OBJC_BRIDGING_HEADER': 'Sources/Bridge/RazonHXBridge.h',
         'LIBRARY_SEARCH_PATHS': ['$(inherited)', '$(SRCROOT)/razon-core/target/$(RAZON_RUST_TARGET)/release'],
-        'OTHER_LDFLAGS': ['$(inherited)', '-lrazon_core', '-liconv', '-framework', 'Security', '-framework', 'SystemConfiguration'],
+        'OTHER_LDFLAGS': ['$(inherited)', '-lrazon_core', '-liconv', '-framework', 'Security', '-framework', 'SystemConfiguration', '-framework', 'ColorSync'],
         'LD_RUNPATH_SEARCH_PATHS': ['$(inherited)', '@executable_path/../Frameworks'],
         'CLANG_ENABLE_MODULES': 'YES', 'SWIFT_EMIT_LOC_STRINGS': 'NO',
         'COMBINE_HIDPI_IMAGES': 'YES', 'DEBUG_INFORMATION_FORMAT': 'dwarf-with-dsym',

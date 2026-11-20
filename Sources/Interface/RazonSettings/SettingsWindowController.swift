@@ -3,21 +3,35 @@ import AppKit
 final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private enum Section: String, CaseIterable {
         case home = "Home", general = "General", appearance = "Appearance"
+        case desktop = "Desktop", wallpaper = "Wallpaper", toolbar = "Toolbar", dock = "Dock"
+        case clock = "Clock & Date", launcher = "Launcher", windows = "Window Manager", widgets = "Widgets"
+        case themes = "Themes", profiles = "Profiles", modules = "Modules"
         case advanced = "Advanced", about = "About RazonHX"
     }
     private let engine: RazonEngine
-    private var config: RazonConfiguration
+    var config: RazonConfiguration
+    weak var desktop: DesktopController?
+    let library: WallpaperLibrary
+    let profiles: RazonProfiles
+    var controlActions: [ControlAction] = []
+    var selectedDisplay = "all"
+    var wallpaperFilter = 0
+    var selectedWallpaper: String?
     private var selected: Section = .home
     private let background = NSView()
     private let sidebar = NSStackView()
     private let content = NSStackView()
     private var observer: NSObjectProtocol?
     private var sectionButtons: [Section: NSButton] = [:]
-    private var accent: NSColor { return NSColor(razonHex: config.appearance.accent_color) ?? .cyan }
+    var accent: NSColor { return NSColor(razonHex: config.appearance.accent_color) ?? .cyan }
     private var text: NSColor { return NSColor(razonHex: config.appearance.text_color) ?? .white }
     private var base: NSColor { return NSColor(razonHex: config.appearance.background_color) ?? .black }
 
-    init(engine: RazonEngine) throws {
+    init(engine: RazonEngine, directory: URL? = nil, desktop: DesktopController? = nil) throws {
+        let directory = try directory ?? RazonEngine.configurationURL().deletingLastPathComponent()
+        self.desktop = desktop
+        self.library = desktop?.library ?? WallpaperLibrary(directory: directory.appendingPathComponent("WallpaperLibrary"))
+        self.profiles = desktop?.profiles ?? RazonProfiles(directory: directory.appendingPathComponent("Profiles"))
         self.engine = engine
         self.config = try engine.configuration()
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1020, height: 760),
@@ -96,21 +110,21 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private func clear(_ stack: NSStackView) {
         for view in stack.arrangedSubviews { stack.removeArrangedSubview(view); view.removeFromSuperview() }
     }
-    private func reload() {
+    func reload() {
         do { config = try engine.configuration() } catch { showError(error); return }
         window?.alphaValue = CGFloat(config.appearance.window_opacity)
         background.layer?.backgroundColor = base.withAlphaComponent(0.94).cgColor
         buildSidebar()
         render()
     }
-    private func label(_ value: String, size: CGFloat = 13, bold: Bool = false, muted: Bool = false) -> NSTextField {
+    func label(_ value: String, size: CGFloat = 13, bold: Bool = false, muted: Bool = false) -> NSTextField {
         let view = NSTextField(wrappingLabelWithString: value)
         view.font = NSFont.systemFont(ofSize: size, weight: bold ? .semibold : .regular)
         view.textColor = muted ? text.withAlphaComponent(0.58) : text
         view.isSelectable = true
         return view
     }
-    private func add(_ view: NSView, to stack: NSStackView? = nil) {
+    func add(_ view: NSView, to stack: NSStackView? = nil) {
         let stack = stack ?? content
         stack.addArrangedSubview(view)
         view.translatesAutoresizingMaskIntoConstraints = false
@@ -127,37 +141,22 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         sectionButtons.removeAll()
         add(label("RAZONHX", size: 23, bold: true), to: sidebar)
         add(label("Redefine Your Desktop.", size: 11, muted: true), to: sidebar)
-        let sections: [(String, Section?)] = [
-            ("Home", .home), ("General", .general), ("Appearance", .appearance),
-            ("Desktop", nil), ("Wallpaper", nil), ("Toolbar", nil), ("Dock", nil),
-            ("Clock & Date", nil), ("Launcher", nil), ("Window Manager", nil),
-            ("Widgets", nil), ("Themes", nil), ("Profiles", nil), ("Modules", nil),
-            ("Advanced", .advanced), ("About RazonHX", .about)
-        ]
-        for (name, section) in sections {
-            if let section = section {
-                let control = button(name, action: #selector(selectSection(_:)))
-                control.isBordered = false
-                control.alignment = .left
-                control.font = NSFont.systemFont(ofSize: 12, weight: .medium)
-                control.wantsLayer = true
-                control.layer?.cornerRadius = 8
-                control.layer?.backgroundColor = section == selected ? accent.withAlphaComponent(0.18).cgColor : NSColor.clear.cgColor
-                control.attributedTitle = NSAttributedString(string: "  " + name, attributes: [
-                    .foregroundColor: section == selected ? accent : text,
-                    .font: NSFont.systemFont(ofSize: 12, weight: .medium)
-                ])
-                control.heightAnchor.constraint(equalToConstant: 28).isActive = true
-                sectionButtons[section] = control
-                add(control, to: sidebar)
-            } else {
-                let planned = label("  " + name + "  ·  planned", size: 11, muted: true)
-                planned.isSelectable = false
-                planned.heightAnchor.constraint(equalToConstant: 21).isActive = true
-                add(planned, to: sidebar)
-            }
+        for section in Section.allCases {
+            let control = button(section.rawValue, action: #selector(selectSection(_:)))
+            control.isBordered = false
+            control.alignment = .left
+            control.wantsLayer = true
+            control.layer?.cornerRadius = 8
+            control.layer?.backgroundColor = section == selected ? accent.withAlphaComponent(0.18).cgColor : NSColor.clear.cgColor
+            control.attributedTitle = NSAttributedString(string: "  " + section.rawValue, attributes: [
+                .foregroundColor: section == selected ? accent : text,
+                .font: NSFont.systemFont(ofSize: 12, weight: .medium)
+            ])
+            control.heightAnchor.constraint(equalToConstant: 28).isActive = true
+            sectionButtons[section] = control
+            add(control, to: sidebar)
         }
-        add(label("v0.1.0 · Foundation\nNative AppKit + Rust", size: 10, muted: true), to: sidebar)
+        add(label("Native Desktop · AppKit + Rust", size: 10, muted: true), to: sidebar)
     }
     @objc private func selectSection(_ sender: NSButton) {
         guard let section = sectionButtons.first(where: { $0.value === sender })?.key else { return }
@@ -165,28 +164,39 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         buildSidebar()
         render()
     }
-    private func card(_ title: String, subtitle: String? = nil) -> CardView {
-        let card = CardView(color: NSColor(razonHex: "#24282B")!)
+    func card(_ title: String, subtitle: String? = nil) -> CardView {
+        let card = CardView(color: base.blended(withFraction: 0.075, of: text) ?? base)
         add(label(title, size: 15, bold: true), to: card)
         if let subtitle = subtitle { add(label(subtitle, muted: true), to: card) }
         add(card)
         return card
     }
-    private func render() {
+    func render() {
         clear(content)
+        controlActions.removeAll()
         add(label(selected.rawValue, size: 30, bold: true))
         switch selected {
         case .home: renderHome()
         case .general: renderGeneral()
         case .appearance: renderAppearance()
+        case .desktop, .modules: renderDesktop()
+        case .wallpaper: renderWallpaper()
+        case .toolbar: renderSurface(\.toolbar, title: "Toolbar", edges: [.top, .bottom])
+        case .dock: renderSurface(\.dock, title: "Dock", edges: DesktopConfiguration.Edge.allCases); renderDockApps()
+        case .clock: renderClock()
+        case .launcher: renderLauncher()
+        case .windows: renderWindowManager()
+        case .widgets: renderWidgets()
+        case .themes: renderThemes()
+        case .profiles: renderProfiles()
         case .advanced: renderAdvanced()
         case .about: renderAbout()
         }
     }
     private func renderHome() {
         add(label("Your desktop, thoughtfully redefined.", size: 15, muted: true))
-        let hero = card("A native foundation. A lighter footprint.",
-            subtitle: "RazonHX combines AppKit with a small Rust core. This first increment establishes reliable settings and a safe bridge before adding desktop renderers.")
+        let hero = card("Make the desktop yours",
+            subtitle: "Customize your floating toolbar, dock, widgets and wallpaper without replacing macOS system components.")
         if let url = Bundle.main.url(forResource: "RazonHX", withExtension: "png", subdirectory: "Logo"),
            let image = NSImage(contentsOf: url) {
             let view = NSImageView()
@@ -197,8 +207,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         }
         add(button("Personalize appearance", action: #selector(openAppearance)), to: hero)
         let state = card("Engine connected")
-        add(label("Configuration schema: \(config.schema_version)\nStorage: local JSON, atomically saved\nUpdates: event-driven; no background polling\nArchitecture: \(architecture)\nSystem: \(ProcessInfo.processInfo.operatingSystemVersionString)"), to: state)
-        add(label("Wallpaper, overlays, launcher and widgets are planned—not active in this build. Memory targets have not yet been measured.", size: 12, muted: true))
+        add(label("Configuration schema: \(config.schema_version)\nStorage: local JSON, atomically saved\nDesktop panels start with RazonHX\nArchitecture: \(architecture)\nSystem: \(ProcessInfo.processInfo.operatingSystemVersionString)"), to: state)
     }
     private var architecture: String {
         #if arch(arm64)
@@ -232,7 +241,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     }
     private func renderAppearance() {
         add(label("Mint accents. Dark glass. Entirely yours.", muted: true))
-        let colors = card("Custom colors", subtitle: "These colors apply to RazonHX settings, not Apple's protected system interface.")
+        let colors = card("Custom colors", subtitle: "These colors apply to RazonHX glass surfaces, not Apple’s system interface. The clock retains its monochrome design.")
         for (index, entry) in [("Accent color", config.appearance.accent_color),
                                ("Background color", config.appearance.background_color),
                                ("Text color", config.appearance.text_color)].enumerated() {
@@ -291,9 +300,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     }
     private func renderAbout() {
         let info = card("RazonHX", subtitle: "Redefine Your Desktop.")
-        add(label("Version 0.1.0 · Foundation\nNative macOS desktop customization environment\nSwift 5 · AppKit · Rust · C ABI\n\nOfficial mint/cyan crowned-star artwork supplied by the project owner. Visual layout is inspired by the supplied Seelen UI reference, with independent implementation."), to: info)
+        add(label("Native Desktop\nNative macOS desktop customization environment\nSwift 5 · AppKit · Rust · C ABI\n\nOfficial mint/cyan crowned-star artwork supplied by the project owner. Visual layout is inspired by the supplied Seelen UI reference, with independent implementation."), to: info)
         let scope = card("Development status")
-        add(label("Implemented: native application lifecycle, persistent validated configuration, event notifications, appearance settings, recovery tools and dual-architecture build automation.\n\nNot yet implemented: wallpaper playback, desktop panels, launcher, window management, widgets, themes and profiles.", muted: true), to: scope)
+        add(label("RazonHX adds native desktop overlays, media wallpapers, launcher, window utilities, widgets, themes and profiles. It does not replace Apple’s Dock, menu bar, or Spaces.", muted: true), to: scope)
     }
     @objc private func revealConfiguration() {
         do { NSWorkspace.shared.activateFileViewerSelecting([try RazonEngine.configurationURL()]) }
@@ -313,11 +322,12 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             try engine.reset()
         } catch { showError(error) }
     }
-    private func save(_ updated: RazonConfiguration) {
-        do { try engine.update(updated) }
-        catch { showError(error); reload() }
+    @discardableResult
+    func save(_ updated: RazonConfiguration) -> Bool {
+        do { try engine.update(updated); return true }
+        catch { showError(error); reload(); return false }
     }
-    private func showError(_ error: Error) {
+    func showError(_ error: Error) {
         let alert = NSAlert(error: error)
         alert.messageText = "RazonHX couldn't complete this change"
         alert.runModal()
