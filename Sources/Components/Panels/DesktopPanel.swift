@@ -10,6 +10,7 @@ final class DesktopPanel: NSPanel {
         hasShadow = interactive
         hidesOnDeactivate = false
         ignoresMouseEvents = !interactive
+        acceptsMouseMovedEvents = interactive
         isReleasedWhenClosed = false
         collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
         appearance = NSAppearance(named: .vibrantDark)

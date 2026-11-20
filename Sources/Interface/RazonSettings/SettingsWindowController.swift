@@ -39,6 +39,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             backing: .buffered, defer: false)
         super.init(window: window)
         window.title = "RazonHX"
+        window.acceptsMouseMovedEvents = true
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.isReleasedWhenClosed = false

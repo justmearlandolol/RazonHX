@@ -68,6 +68,22 @@ struct SettingsSmokeTests {
             findButton(section, in: content).performClick(nil)
             content.layoutSubtreeIfNeeded()
         }
+        let png = root.appendingPathComponent("test.png")
+        let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 2, pixelsHigh: 2, bitsPerSample: 8,
+            samplesPerPixel: 4, hasAlpha: true, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
+        for y in 0..<2 { for x in 0..<2 { bitmap.setColor(.white, atX: x, y: y) } }
+        try bitmap.representation(using: .png, properties: [:])!.write(to: png)
+        let imported = try controller.library.add(png, name: "Test image", category: "Tests")
+        let managed = controller.library.url(for: imported)
+        assert(managed != png)
+        try FileManager.default.removeItem(at: png)
+        try controller.library.checkReadable(imported)
+        let preview = try WallpaperRenderer(url: managed, kind: imported.kind, scaling: .fill,
+            accent: .cyan, active: false, volume: 0)
+        preview.frame = NSRect(x: 0, y: 0, width: 200, height: 100)
+        preview.layoutSubtreeIfNeeded()
+        assert(preview.subviews.compactMap { $0 as? NSImageView }.first?.image != nil)
+
         assert(!controller.windowShouldClose(window), "Keep-running mode should order out rather than destroy the window")
         let reopened = try RazonEngine(url: root.appendingPathComponent("config.json"))
         let persisted = try reopened.configuration()

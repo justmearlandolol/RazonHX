@@ -31,7 +31,8 @@ final class DesktopController {
     private var observers: [(NotificationCenter, NSObjectProtocol)] = []
     private var localMotion: Any?
     private var globalMotion: Any?
-    private var asleep = false
+    private var screensAsleep = false
+    private var sessionInactive = false
 
     init(engine: RazonEngine, directory: URL, settings: @escaping () -> Void) {
         self.engine = engine
@@ -49,11 +50,17 @@ final class DesktopController {
         for name in [NSWorkspace.didLaunchApplicationNotification, NSWorkspace.didTerminateApplicationNotification] {
             observe(name, center: workspace) { [weak self] _ in self?.docks.forEach { $0.refresh() } }
         }
-        for name in [NSWorkspace.screensDidSleepNotification, NSWorkspace.sessionDidResignActiveNotification] {
-            observe(name, center: workspace) { [weak self] _ in self?.asleep = true; self?.applyPlayback() }
+        observe(NSWorkspace.screensDidSleepNotification, center: workspace) { [weak self] _ in
+            self?.screensAsleep = true; self?.applyPlayback()
         }
-        for name in [NSWorkspace.screensDidWakeNotification, NSWorkspace.sessionDidBecomeActiveNotification] {
-            observe(name, center: workspace) { [weak self] _ in self?.asleep = false; self?.applyPlayback() }
+        observe(NSWorkspace.screensDidWakeNotification, center: workspace) { [weak self] _ in
+            self?.screensAsleep = false; self?.applyPlayback()
+        }
+        observe(NSWorkspace.sessionDidResignActiveNotification, center: workspace) { [weak self] _ in
+            self?.sessionInactive = true; self?.applyPlayback()
+        }
+        observe(NSWorkspace.sessionDidBecomeActiveNotification, center: workspace) { [weak self] _ in
+            self?.sessionInactive = false; self?.applyPlayback()
         }
         windows.remember(NSWorkspace.shared.frontmostApplication)
         reload(force: true)
@@ -165,7 +172,7 @@ final class DesktopController {
             return item.kind == .mp4 || item.kind == .wav
         }
         for (id, instance) in media {
-            instance.renderer.setPlayback(active: !asleep && !config.media_paused,
+            instance.renderer.setPlayback(active: !screensAsleep && !sessionInactive && !config.media_paused,
                 volume: id == audible ? config.media_volume : 0)
         }
     }

@@ -31,6 +31,7 @@ final class RazonLauncher: NSObject, NSTableViewDataSource, NSTableViewDelegate,
         let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 488, height: 364),
             styleMask: [.titled, .closable, .utilityWindow, .fullSizeContentView], backing: .buffered, defer: false)
         panel.titleVisibility = .hidden
+        panel.acceptsMouseMovedEvents = true
         panel.titlebarAppearsTransparent = true
         panel.isReleasedWhenClosed = false
         panel.hidesOnDeactivate = true
