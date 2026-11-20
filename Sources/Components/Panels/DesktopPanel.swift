@@ -40,7 +40,8 @@ struct GlassPalette: Equatable {
         wrap.layer?.masksToBounds = true
         if style.blur {
             let blur = NSVisualEffectView(frame: wrap.bounds)
-            blur.material = .hudWindow
+            if #available(macOS 10.14, *) { blur.material = .hudWindow }
+            else { blur.material = .popover }
             blur.blendingMode = .behindWindow
             blur.state = .active
             blur.autoresizingMask = [.width, .height]

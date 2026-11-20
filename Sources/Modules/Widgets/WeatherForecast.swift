@@ -12,14 +12,17 @@ struct WeatherForecast: Decodable {
         let time: [String]
         let temperature_2m: [Double]
         let precipitation_probability: [Int?]
+        let weather_code: [Int?]
     }
     let current: Current
     let hourly: Hourly
 
-    var nextHours: [(String, Double)] {
-        let start = hourly.time.firstIndex(where: { $0 >= current.time }) ?? 0
-        return zip(hourly.time, hourly.temperature_2m).dropFirst(start).prefix(7).map {
-            (String($0.0.suffix(5)), $0.1)
+    var nextHours: [(time: String, temperature: Double, code: Int?)] {
+        guard let start = hourly.time.firstIndex(where: { $0 >= current.time }) else { return [] }
+        return hourly.time.indices.dropFirst(start).prefix(7).compactMap { index in
+            guard hourly.temperature_2m.indices.contains(index) else { return nil }
+            let code = hourly.weather_code.indices.contains(index) ? hourly.weather_code[index] : nil
+            return (String(hourly.time[index].suffix(5)), hourly.temperature_2m[index], code)
         }
     }
 
@@ -35,7 +38,7 @@ struct WeatherForecast: Decodable {
             URLQueryItem(name: "latitude", value: String(location.latitude)),
             URLQueryItem(name: "longitude", value: String(location.longitude)),
             URLQueryItem(name: "current", value: "temperature_2m,weather_code,relative_humidity_2m,wind_speed_10m"),
-            URLQueryItem(name: "hourly", value: "temperature_2m,precipitation_probability"),
+            URLQueryItem(name: "hourly", value: "temperature_2m,precipitation_probability,weather_code"),
             URLQueryItem(name: "timezone", value: "auto"),
             URLQueryItem(name: "forecast_days", value: "2")
         ]

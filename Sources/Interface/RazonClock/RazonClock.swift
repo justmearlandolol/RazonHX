@@ -71,7 +71,7 @@ final class RazonClock: NSView {
         for frame in [analog, digital, weather] { card(frame) }
         dial(in: analog.insetBy(dx: 8, dy: 8))
         let dim = NSColor(white: 0.73, alpha: 1)
-        write(time.string(from: now), 191, 29, 16, weight: .heavy, mono: true)
+        write(time.string(from: now), 191, 29, config.twenty_four_hour ? 16 : 13, weight: .heavy, mono: true)
         write(day.string(from: now).uppercased(), 190, 55, 34, weight: .black)
         write(date.string(from: now), 192, 96, 13, weight: .bold, color: dim)
         drawWeather(dim: dim)
@@ -115,24 +115,23 @@ final class RazonClock: NSView {
                 106, 228, 11, color: dim)
             return
         }
-        let symbol = forecast.current.weather_code == 0 ? "☀" : forecast.current.weather_code < 50 ? "☁" : "☂"
-        write(symbol, 23, 218, 19, weight: .bold, color: amber)
+        write(weatherSymbol(forecast.current.weather_code), 23, 218, 19, weight: .bold, color: amber)
         write(String(format: "%.0f°", forecast.current.temperature_2m), 50, 213, 28, weight: .black)
         let values = forecast.nextHours
         guard values.count > 1 else { return }
-        let minValue = values.map(\.1).min() ?? 0, maxValue = values.map(\.1).max() ?? 0
+        let minValue = values.map(\.temperature).min() ?? 0, maxValue = values.map(\.temperature).max() ?? 0
         let left: CGFloat = 123, right: CGFloat = 278, top: CGFloat = 206, span: CGFloat = 22
         let line = NSBezierPath()
         for (index, entry) in values.enumerated() {
             let x = left + (right - left) * CGFloat(index) / CGFloat(values.count - 1)
-            let y = top + span * CGFloat((maxValue - entry.1) / max(1, maxValue - minValue))
+            let y = top + span * CGFloat((maxValue - entry.temperature) / max(1, maxValue - minValue))
             let grid = NSBezierPath()
             grid.move(to: NSPoint(x: x, y: 200)); grid.line(to: NSPoint(x: x, y: 235))
             NSColor(white: 1, alpha: 0.10).setStroke(); grid.lineWidth = 0.5; grid.stroke()
             if index == 0 { line.move(to: NSPoint(x: x, y: y)) } else { line.line(to: NSPoint(x: x, y: y)) }
             if index % 2 == 0 {
-                write(symbol, x - 4, 185, 9, color: index == 0 ? amber : dim)
-                write(entry.0, x - 9, 241, 6.5, color: dim, mono: true)
+                write(weatherSymbol(entry.code), x - 4, 185, 9, color: index == 0 ? amber : dim)
+                write(entry.time, x - 9, 241, 6.5, color: dim, mono: true)
             }
         }
         NSColor.white.setStroke(); line.lineWidth = 1.1; line.stroke()
@@ -142,6 +141,17 @@ final class RazonClock: NSView {
             let x = 123 + CGFloat(index) * 58
             write(metric.0, x, 265, 10, weight: .bold)
             write(metric.1, x, 279, 7.5, color: dim)
+        }
+    }
+
+    private func weatherSymbol(_ code: Int?) -> String {
+        guard let code = code else { return "·" }
+        switch code {
+        case 0: return "☀"
+        case 71...77, 85...86: return "❄"
+        case 51...82: return "☂"
+        case 95...99: return "ϟ"
+        default: return "☁"
         }
     }
 

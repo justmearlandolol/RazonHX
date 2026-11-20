@@ -59,7 +59,7 @@ final class WallpaperRenderer: NSView {
         player?.volume = Float(volume)
         if active { player?.play() } else { player?.pause() }
         wave?.setPlayback(active: active, volume: volume)
-        html?.isHidden = !active
+        html?.setPlayback(active)
     }
 
     override func layout() {

@@ -65,9 +65,17 @@ jobs:
       - name: Build native application
         run: |
           set -o pipefail
-          xcodebuild -project RazonHX.xcodeproj -scheme RazonHX-${{ matrix.label }} \
+          if ! xcodebuild -project RazonHX.xcodeproj -scheme RazonHX-${{ matrix.label }} \
             -configuration Release -derivedDataPath build/${{ matrix.label }} \
-            CODE_SIGNING_ALLOWED=NO build | tee xcodebuild.log
+            CODE_SIGNING_ALLOWED=NO build 2>&1 | tee xcodebuild.log; then
+            python3 - <<'PYTHON'
+          from pathlib import Path
+          log = Path('xcodebuild.log').read_text()
+          errors = '\n'.join(line for line in log.splitlines() if 'error:' in line) or log[-6000:]
+          print('::error title=Xcode build details::' + errors[:11000].replace('%', '%25').replace('\n', '%0A').replace('\r', '%0D'))
+          PYTHON
+            exit 1
+          fi
       - name: Swift bridge and native utility tests
         run: scripts/test-swift.sh
       - name: Verify and package bundle

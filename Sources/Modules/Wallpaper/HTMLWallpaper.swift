@@ -4,19 +4,23 @@ import WebKit
 final class HTMLWallpaper: NSView, WKNavigationDelegate {
     private static let policy = """
     [{"trigger":{"url-filter":".*"},"action":{"type":"block"}},
-     {"trigger":{"url-filter":"^data:"},"action":{"type":"ignore-previous-rules"}}]
+     {"trigger":{"url-filter":"^data:"},"action":{"type":"ignore-previous-rules"}},
+     {"trigger":{"url-filter":"^about:blank$"},"action":{"type":"ignore-previous-rules"}}]
     """
     private static let header = """
-    <!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy"
+    <!doctype html><meta charset="utf-8"><meta http-equiv="X-DNS-Prefetch-Control" content="off">
+    <meta http-equiv="Content-Security-Policy"
     content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; font-src data:; form-action 'none'; base-uri 'none'">
     <style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#101017}</style>
     """
+    private let html: String
+    private var playing = true
     private var webView: WKWebView?
     private var initialNavigation: WKNavigation?
     private var allowInitial = true
 
     init(url: URL) throws {
-        let html = try String(contentsOf: url, encoding: .utf8)
+        html = try String(contentsOf: url, encoding: .utf8)
         super.init(frame: .zero)
         WKContentRuleListStore.default().compileContentRuleList(forIdentifier: "RazonHX-Local-Wallpaper-v1",
             encodedContentRuleList: Self.policy) { [weak self] rules, _ in
@@ -32,12 +36,26 @@ final class HTMLWallpaper: NSView, WKNavigationDelegate {
                 view.navigationDelegate = self
                 self.addSubview(view)
                 self.webView = view
-                self.initialNavigation = view.loadHTMLString(Self.header + html, baseURL: nil)
+                self.load()
             }
         }
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+
+    func setPlayback(_ active: Bool) {
+        guard playing != active else { return }
+        playing = active
+        load()
+    }
+
+    private func load() {
+        guard let webView = webView else { return }
+        webView.stopLoading()
+        allowInitial = true
+        let pauseCSS = "<style>*,*::before,*::after{animation-play-state:paused!important}</style>"
+        initialNavigation = webView.loadHTMLString(Self.header + (playing ? "" : pauseCSS) + html, baseURL: nil)
+    }
 
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
                  decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
@@ -48,7 +66,7 @@ final class HTMLWallpaper: NSView, WKNavigationDelegate {
     }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-        if initialNavigation === navigation { failure() }
+        if initialNavigation === navigation, (error as NSError).code != NSURLErrorCancelled { failure() }
     }
 
     private func failure() {

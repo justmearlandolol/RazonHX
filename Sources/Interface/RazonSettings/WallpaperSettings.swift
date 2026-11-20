@@ -90,7 +90,7 @@ extension SettingsWindowController {
                 controller.apply(next)
             }
         }
-        if config.desktop.wallpapers[selectedDisplay] != nil {
+        if selectedDisplay == "all" ? !config.desktop.wallpapers.isEmpty : config.desktop.wallpapers[selectedDisplay] != nil {
             command(selectedDisplay == "all" ? "Remove wallpaper from all displays" : "Remove this display override", in: selection) { controller in
                 let target = controller.selectedDisplay
                 controller.changeDesktop {
